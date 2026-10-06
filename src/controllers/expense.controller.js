@@ -1,347 +1,365 @@
-const Expense = require('../models/expense.model')
-const user = require('../models/user.model')
+const Expense = require("../models/expense.model");
+const User = require("../models/user.model");
 
-const {isValidId} = require('../utils/validate.utils')
+const { isValidId } = require("../utils/validate.utils");
 
-const createExpense = async(req,res,next)=>{
-    try{
-        const{
+// Create Expense
+const createExpense = async (req, res, next) => {
+    try {
+        const {
             userId,
             title,
             amount,
             category,
             description
-        } = req.body
+        } = req.body;
 
-        if(!userId || !title || !amount || !category){
+        if (!userId || !title || amount === undefined || !category) {
             return res.status(400).json({
-                success:false,
-                message:'userId, title, amout and category are frequired'
-            })
+                success: false,
+                message: "userId, title, amount and category are required"
+            });
         }
 
-        if(!isValid(userId)){
+        if (!isValidId(userId)) {
             return res.status(400).json({
-                success:false,
-                message:'invalid user Id'
-            })
+                success: false,
+                message: "Invalid user ID"
+            });
         }
-        if(Number(amount)<=0){
+
+        if (Number(amount) <= 0) {
             return res.status(400).json({
-                success:false,
-                message:"Amount must be greater than 0"
-            })
+                success: false,
+                message: "Amount must be greater than 0"
+            });
         }
-        const user=await user.findById(userId)
-        if(!user){
+
+        const existingUser = await User.findById(userId);
+
+        if (!existingUser) {
             return res.status(404).json({
-                success:false,
-                message:'User not found'
-            })
+                success: false,
+                message: "User not found"
+            });
         }
-        const expense=await Expense.create({
+
+        const expense = await Expense.create({
             userId,
             title,
             amount,
             category,
             description
-        })
+        });
 
-        res.status(201).json({
-            success:true,
-            message:'Expense created successfuly',
-            data:expense
-        })
-    }catch(error){
-        next(error)
+        return res.status(201).json({
+            success: true,
+            message: "Expense created successfully",
+            data: expense
+        });
+
+    } catch (error) {
+        next(error);
     }
-}
+};
 
-const getExpense=async (req,res,next)=>{
-    try{
-        const{
-            page=1,
-            limit=10,
+
+// Get Expenses
+const getExpense = async (req, res, next) => {
+    try {
+        const {
+            page = 1,
+            limit = 10,
             userId,
             category,
             fromDate,
             toDate
-        }=req.query
+        } = req.query;
 
-        const pageNumber=Number(page)
-        const limitNumber= Number(limit)
+        const pageNumber = Number(page);
+        const limitNumber = Number(limit);
 
-        if(
-            pageNumber<1 ||
-            limitNumber<1 ||
-            limitNumber>100
-        ){
+        if (
+            pageNumber < 1 ||
+            limitNumber < 1 ||
+            limitNumber > 100
+        ) {
             return res.status(400).json({
-                success:false,
-                message:'invalid pagination'
-            })
+                success: false,
+                message: "Invalid pagination"
+            });
         }
-        const filter={}
-        if(userId){
-            if(!isValidId(userId)){
-                return
-                res.status(400).json({
-                    success:false,
-                    message:'invalid user Id'
-                })
+
+        const filter = {};
+
+        // Filter by user
+        if (userId) {
+            if (!isValidId(userId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid user ID"
+                });
             }
-            filter.userid=userId
+
+            filter.userId = userId;
         }
-        if(category){
-            filter.category=category
+
+        // Filter by category
+        if (category) {
+            filter.category = category;
         }
-        if(fromDate || toDate){
-            filter.createdAt={}
-            if(fromDate){
-                filter.createAt.$gte=new Date(fromDate)
+
+        // Filter by date
+        if (fromDate || toDate) {
+            filter.createdAt = {};
+
+            if (fromDate) {
+                filter.createdAt.$gte = new Date(fromDate);
             }
-            if(toDate){
-                const endDate=new Date(toDate)
+
+            if (toDate) {
+                const endDate = new Date(toDate);
 
                 endDate.setHours(
                     23,
                     59,
                     59,
                     999
-                )
-                filter.createdAt.$lte=endDte
+                );
+
+                filter.createdAt.$lte = endDate;
             }
         }
-        const skip =(pageNumber-1)*limitNumber
 
-        const expenses = await Expense.find(filter).populate('userId','name email')
-        .sort({createdAt: -1})
-        .skip(skip)
-        .limit(limitNumber)
+        const skip = (pageNumber - 1) * limitNumber;
 
-        const total=await Expense.countDocuments(filter)
-        res.json({
-            success:true,
-            data:expenses,
-            pagination:{
-                page:pageNumber,
-                limit:limitNumber,
-                total:total,
-                totalPages:Math.ceil(total/limitNumber)
+        const expenses = await Expense.find(filter)
+            .populate("userId", "name email")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNumber);
+
+        const total = await Expense.countDocuments(filter);
+
+        return res.status(200).json({
+            success: true,
+            data: expenses,
+            pagination: {
+                page: pageNumber,
+                limit: limitNumber,
+                total: total,
+                totalPages: Math.ceil(total / limitNumber)
             }
-        })
-            }catch(error){
-                next(error)
-            }
-}
+        });
 
-const getExpenseById =async(
-    req,
-    res,
-    next
-)=>{
-    try{
-        const{id}=req.params
-        if(!isValidId(id)){
-            return res.status(400).json({
-                success:false,
-                message:'invalid expense ID'
-            })
-        }
-        const expense = await Expense.findById(id)
-        .populate('userId','nameemail')
-
-        if(!expense){
-            return res.status(404).json({
-                success:false,
-                message:'Expense not found'
-            })
-        }
-        res.json({
-            success:true,
-            data:expense
-        })
-    }catch(error){
-        next(error)
+    } catch (error) {
+        next(error);
     }
-}
+};
 
-const updateExpense=async(
-    req,
-    res,
-    next
-)=>{
-    try{
-        const{id}=req.params
 
-        if(!isValidId(id)){
+// Get Expense By ID
+const getExpenseById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
             return res.status(400).json({
-                success:false,
-                message:'Invalid expense ID'
-            })
+                success: false,
+                message: "Invalid expense ID"
+            });
         }
 
-        const expense=await Expense.findById(id)
+        const expense = await Expense.findById(id)
+            .populate("userId", "name email");
 
-        if(!expense){
+        if (!expense) {
             return res.status(404).json({
-                success:false,
-                message:'Expense not found'
-            })
+                success: false,
+                message: "Expense not found"
+            });
         }
 
-        const{
+        return res.status(200).json({
+            success: true,
+            data: expense
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// Update Expense
+const updateExpense = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid expense ID"
+            });
+        }
+
+        const expense = await Expense.findById(id);
+
+        if (!expense) {
+            return res.status(404).json({
+                success: false,
+                message: "Expense not found"
+            });
+        }
+
+        const {
             title,
             amount,
             category,
             description
-        }=req.body
+        } = req.body;
 
-        if(title){
-            expense.title=title
+        if (title !== undefined) {
+            expense.title = title;
         }
-        if(amount!== undefined){
-            if(Number(amount)<=0){
-                return
-                res.status(400).json({
-                    success:false,
-                    message:'Amount must be greater than 0'
-                })
+
+        if (amount !== undefined) {
+            if (Number(amount) <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Amount must be greater than 0"
+                });
             }
-            expense.amount = amount
-        }
-        if(category){
-            expense.category=category
-        }
-        if(description !== undefined){
-            expense.description=description
+
+            expense.amount = amount;
         }
 
-        await expense.save()
-        res.json({
-            success:true,
-            message:'Expense updated successfully',
-            date:expense
-        })
-    }catch(error){
-        next(error)
+        if (category !== undefined) {
+            expense.category = category;
+        }
+
+        if (description !== undefined) {
+            expense.description = description;
+        }
+
+        await expense.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Expense updated successfully",
+            data: expense
+        });
+
+    } catch (error) {
+        next(error);
     }
-}
+};
 
 
+// Delete Expense
+const deleteExpense = async (req, res, next) => {
+    try {
+        const { id } = req.params;
 
-const deleteExpense=async(
-    req,
-    res,
-    next
-)=>{
-    try{
-        const{id}=req.params
-
-        if(!isValidId(id)){
+        if (!isValidId(id)) {
             return res.status(400).json({
-                success:false,
-                message:'Invalid expense ID'
-            })
+                success: false,
+                message: "Invalid expense ID"
+            });
         }
 
-        const expense=await Expense.findOneAndDelete(id)
-            if(!expense){
-                return res.status(404).json({
-                    success:false,
-                    message:'Expense not found'
-                })
+        const expense = await Expense.findByIdAndDelete(id);
+
+        if (!expense) {
+            return res.status(404).json({
+                success: false,
+                message: "Expense not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Expense deleted successfully"
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// Expense Summary
+const getExpenseSummary = async (req, res, next) => {
+    try {
+        const { userId } = req.query;
+
+        const filter = {};
+
+        if (userId) {
+            if (!isValidId(userId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid user ID"
+                });
             }
-            res.json({
-                success:true,
-                message:'Expense deleted successfully'
-            })
-        }catch(error){
-            next(error)
-        }
-    }
-    
 
-
-
-
-    const getExpenseSummary =async(
-    req,
-    res,
-    next
-)=>{
-    try{
-        const{userId}=req.query
-        const filter={}
-        if(userId){
-        if(!isValidId(id)){
-            return res.status(400).json({
-                success:false,
-                message:'invalid user ID'
-            })
-        }
-        filter.userId=userId
+            filter.userId = userId;
         }
 
-        const result =
-        await Expense.aggregate([
+        const result = await Expense.aggregate([
             {
-                $match:filter
+                $match: filter
             },
             {
-            $group:{
-                _id:null,
-                totalAmount:{
-                    $sum:'$amount'
-                },
-                totalExpenses:{
-                    $sum:1
+                $group: {
+                    _id: null,
+                    totalAmount: {
+                        $sum: "$amount"
+                    },
+                    totalExpenses: {
+                        $sum: 1
+                    }
                 }
             }
-        }
-    ])
+        ]);
 
-    const categoryResult =
-        await Expense.aggregate([
+        const categoryResult = await Expense.aggregate([
             {
-                $match:filter
+                $match: filter
             },
             {
-            $group:{
-                _id:'$category',
-                totalAmount:{
-                    $sum:'$amount'
-                },
-                count:{
-                    $sum:1
+                $group: {
+                    _id: "$category",
+                    totalAmount: {
+                        $sum: "$amount"
+                    },
+                    count: {
+                        $sum: 1
+                    }
                 }
             }
-        }
-    ])
+        ]);
 
-    res.json({
-        success:true,
-        data:{
-            totalAmount:
-            result[0]?.totalAmount||0,
-            totalExpense:
-            result[0]?.totalExpenses||0,
-            byCategory:
-            categoryResult
-        }
+        return res.status(200).json({
+            success: true,
+            data: {
+                totalAmount: result[0]?.totalAmount || 0,
+                totalExpenses: result[0]?.totalExpenses || 0,
+                byCategory: categoryResult
+            }
+        });
 
-        })
-
-    }catch(error){
-        next(error)
+    } catch (error) {
+        next(error);
     }
-}
+};
 
-module.exports ={
+
+module.exports = {
     createExpense,
     getExpense,
     getExpenseById,
     updateExpense,
     deleteExpense,
     getExpenseSummary
-}
+};

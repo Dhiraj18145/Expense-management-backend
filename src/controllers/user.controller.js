@@ -1,85 +1,101 @@
-const user = require('../models/user.model')
-const{isValidEmail} = require('../utils/validate.utils')
+const User = require("../models/user.model");
+const { isValidEmail, isValidId } = require("../utils/validate.utils");
 
-const createuser = async(req,res,next)=>{
-    try{
-        const{name,email} = req.body
+// Create User
+const createuser = async (req, res, next) => {
+    try {
+        const { name, email } = req.body;
 
-        if(!name || !email){
+        if (!name || !email) {
             return res.status(400).json({
-                success:false,
-                message:"name and email are required"
-            })
+                success: false,
+                message: "Name and email are required"
+            });
         }
-        if(!isValidEmail(email)){
-            return res.status(400).json({
-                success:false,
-                message:'invalid email'
-            })
-        }
-        const existinguser = await user.findOne({email})
 
-        if(existinguser){
+        if (!isValidEmail(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email"
+            });
+        }
+
+        const existingUser = await User.findOne({ email });
+
+        if (existingUser) {
             return res.status(409).json({
-                success:false,
-                message:'email already existed'
-            })
+                success: false,
+                message: "Email already exists"
+            });
         }
-        const user = await user.create({
+
+        const newUser = await User.create({
             name,
             email
-        })
-        res.status(201).json({
+        });
+
+        return res.status(201).json({
             success: true,
-            message:'user created successfuly',
-            data:user
-        })
+            message: "User created successfully",
+            data: newUser
+        });
 
-    }catch(error){
-        next(error)
+    } catch (error) {
+        next(error);
     }
-}
+};
 
-const getusers =async(req,res,next)=>{
-    try{
-        const users = await user.find()
-        res.json({
-            success:true,
-            data:users
-        })
-    }catch(error){
-        next(error)
+
+// Get All Users
+const getusers = async (req, res, next) => {
+    try {
+        const users = await User.find();
+
+        return res.status(200).json({
+            success: true,
+            data: users
+        });
+
+    } catch (error) {
+        next(error);
     }
-}
+};
 
-const getuserById =async(req,res,next)=>{
-    try{
-        const{id}= req.params
-        if(!isValidId(id)){
+
+// Get User By ID
+const getuserById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
             return res.status(400).json({
-                succcess:false,
-                message:'invalid user Id'
-            })
+                success: false,
+                message: "Invalid user ID"
+            });
         }
-        const user = await user.findById(id)
-        if(!user){
 
+        const foundUser = await User.findById(id);
+
+        if (!foundUser) {
             return res.status(404).json({
-                success:false,
-                message:'user not found'
-            })
+                success: false,
+                message: "User not found"
+            });
         }
-        res,json({
-            success:true,
-            data:user
-        })
-    }catch(error){
-        next(error)
-    }
-}
 
-module.exports={
+        return res.status(200).json({
+            success: true,
+            data: foundUser
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+module.exports = {
     createuser,
     getusers,
     getuserById
-}
+};

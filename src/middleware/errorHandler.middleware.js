@@ -1,9 +1,10 @@
-const errorhandler = (err,req,res,next)=>{
-    console.log(err)
-    res.status(500).json({
-        success:false,
-        message:'server error'
-    })
-}
+const errorhandler = (err, req, res, next) => {
+    console.log("Error:", err);
 
-module.exports=errorhandler
+    res.status(500).json({
+        success: false,
+        message: err.message || "Server error"
+    });
+};
+
+module.exports = errorhandler;

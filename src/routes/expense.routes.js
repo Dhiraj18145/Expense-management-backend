@@ -1,26 +1,27 @@
-const express= require('express')
+const express = require("express");
 
-const{
+const {
     createExpense,
     getExpense,
     getExpenseById,
     updateExpense,
     deleteExpense,
     getExpenseSummary
-}= require('../controllers/expense.controller')
+} = require("../controllers/expense.controller");
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/',createExpense)
+router.post("/", createExpense);
 
-router.get('/summary',getExpenseSummary)
+// IMPORTANT: summary must come before /:id
+router.get("/summary", getExpenseSummary);
 
-router.get('/summary',getExpense)
+router.get("/", getExpense);
 
-router.get('/',getExpenseById)
+router.get("/:id", getExpenseById);
 
-router.put('/:id',updateExpense)
+router.put("/:id", updateExpense);
 
-router.delete('/:id',deleteExpense)
+router.delete("/:id", deleteExpense);
 
-module.exports = router
+module.exports = router;

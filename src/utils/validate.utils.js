@@ -1,15 +1,14 @@
-const mongoose = require('mongoose')
+const mongoose = require("mongoose");
 
-const isValidId = (id)=>{
-    return
-    mongoose.Types.ObjectId.isValid(id)
-}
+const isValidId = (id) => {
+    return mongoose.Types.ObjectId.isValid(id);
+};
 
-const isValidEmail =(email)=>{
-    return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
+const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
 
-module.exports ={
+module.exports = {
     isValidId,
     isValidEmail
-}
+};
